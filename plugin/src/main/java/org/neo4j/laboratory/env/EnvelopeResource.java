@@ -60,22 +60,13 @@ public class EnvelopeResource
     }
 
     @POST
-    @Path("/max-write/{count}")
+    @Path("/max-write/{count}/{batch}")
     @Produces(MediaType.APPLICATION_JSON)
-    public String writeNode( @Context GraphDatabaseService graphdb, @PathParam("count") long count )
+    public String writeNode( @Context GraphDatabaseService graphdb, @PathParam("count") long count, @PathParam("batch") long batch )
     {
-        Transaction tx = graphdb.beginTx();
-        try
-        {
-            for ( long i = 0; i < count; i++ )
-            {
-                graphdb.createNode();
-            }
-            tx.success();
-        } finally
-        {
-            tx.finish();
-        }
+        GraphGenerator nodeGenerator = NodeGenerator.createNodeGenerator( graphdb, count, batch );
+        nodeGenerator.generate( null );
+
         return "{}";
     }
 
@@ -351,17 +342,22 @@ public class EnvelopeResource
     @Produces(MediaType.APPLICATION_JSON)
     public String makeLinkedList( @Context GraphDatabaseService graphdb, @PathParam("count") long count, @PathParam("batch") long batch )
     {
+        RelationshipType relType = DynamicRelationshipType.withName( "link" );
+
         Transaction tx = graphdb.beginTx();
+        Node head = null;
         try
         {
-            RelationshipType relType = DynamicRelationshipType.withName( "link" );
-            Node previous = graphdb.createNode();
-            LinkedListGenerator.createLinkedListGenerator( graphdb, count, relType, batch ).generate( previous );
+            head = graphdb.createNode();
             tx.success();
         } finally
         {
             tx.finish();
         }
+
+        GraphGenerator listGenerator = LinkedListGenerator.createLinkedListGenerator( graphdb, count, relType, batch );
+        listGenerator.generate( head );
+
         return "{}";
     }
 

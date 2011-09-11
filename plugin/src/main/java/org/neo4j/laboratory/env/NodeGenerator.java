@@ -15,18 +15,18 @@ public class NodeGenerator implements GraphGenerator
 
     private GraphDatabaseService graphdb;
     private long count;
-    private long flushInterval;
+    private long batch;
 
-    private NodeGenerator( GraphDatabaseService graphdb, long count, long flushInterval )
+    private NodeGenerator( GraphDatabaseService graphdb, long count, long batch )
     {
         this.graphdb = graphdb;
         this.count = count;
-        this.flushInterval = flushInterval;
+        this.batch = batch;
     }
 
-    public static NodeGenerator createNodeGenerator( GraphDatabaseService graphdb, long count, long flushInterval )
+    public static NodeGenerator createNodeGenerator( GraphDatabaseService graphdb, long count, long batch )
     {
-        return new NodeGenerator( graphdb, count, flushInterval );
+        return new NodeGenerator( graphdb, count, batch );
     }
 
     /**
@@ -46,7 +46,7 @@ public class NodeGenerator implements GraphGenerator
             {
                 lastNode = graphdb.createNode();
 
-                if ( (i % flushInterval) == 0 )
+                if ( (i % batch) == 0 )
                 {
                     tx.success();
                     tx.finish();

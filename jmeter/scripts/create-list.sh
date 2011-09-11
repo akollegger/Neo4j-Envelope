@@ -1,5 +1,5 @@
 #!/bin/bash
-RESULT_LOG="../results/create-linked-list"
+RESULT_LOG="../results/create-linked-list.log"
 HOST_UNDER_TEST="localhost"
 HOST_PORT="7474"
 COUNT="100000"

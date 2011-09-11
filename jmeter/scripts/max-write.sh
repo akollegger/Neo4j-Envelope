@@ -1,5 +1,5 @@
 #!/bin/bash
-RESULT_LOG="../results/create-disc-graph"
+RESULT_LOG="../results/create-disc-graph.log"
 HOST_UNDER_TEST="localhost"
 COUNT="100000"
 BATCH="10000"
