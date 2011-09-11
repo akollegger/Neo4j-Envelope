@@ -16,42 +16,44 @@ public class TreeGenerator implements GraphGenerator
 
     private GraphDatabaseService graphdb;
     private long depth;
-    private long density;
+    private long branchFactor;
     private RelationshipType relType;
     private long batch;
 
-    private TreeGenerator( GraphDatabaseService graphdb, long density, long depth, RelationshipType relType, long batch )
+    private TreeGenerator( GraphDatabaseService graphdb, long branchFactor, long depth, RelationshipType relType, long batch )
     {
         this.graphdb = graphdb;
-        this.density = density;
+        this.branchFactor = branchFactor;
         this.depth = depth;
         this.relType = relType;
         this.batch = batch;
     }
 
-    public static TreeGenerator createTreeGenerator( GraphDatabaseService graphdb, long density, long depth, RelationshipType relType, long batch )
+    public static TreeGenerator createTreeGenerator( GraphDatabaseService graphdb, long branchFactor, long depth, RelationshipType relType, long batch )
     {
-        return new TreeGenerator( graphdb, density, depth, relType, batch );
+        return new TreeGenerator( graphdb, branchFactor, depth, relType, batch );
     }
 
     @Override
     public Iterable<Node> generate( Node origin )
     {
         Transaction tx = graphdb.beginTx();
-        Node parent = origin;
         try
         {
-            for ( long i = 0; i < depth; i++ )
+            for ( long d = 1; d <= depth; d++ )
             {
                 // create children
-                for ( long j=0; j < Math.pow(i+1, density); j++)
+                long parentRowSize = (long)Math.pow(branchFactor, d-2);
+                for ( long j=1; j <= (long)Math.pow(branchFactor, d-1 ); j++)
                 {
                     Node child = graphdb.createNode();
+                    long parentPosition = (j/branchFactor)+1;
+                    long parentNodeId = (child.getId() - j) - parentRowSize + parentPosition;
+                    Node parent = graphdb.getNodeById( parentNodeId );
+                    parent.createRelationshipTo( child, relType );
                 }
-                // connect to parents
 
-
-                if ( (i % batch) == 0 )
+                if ( (d % batch) == 0 )
                 {
                     tx.success();
                     tx.finish();
@@ -64,7 +66,6 @@ public class TreeGenerator implements GraphGenerator
             tx.finish();
         }
         Collection<Node> returnNodes = new ArrayList<Node>();
-        returnNodes.add(previous);
         return returnNodes;
     }
 }
