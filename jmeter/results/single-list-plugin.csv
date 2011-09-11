@@ -1,0 +1,3 @@
+sampler_label,aggregate_report_count,average,aggregate_report_median,aggregate_report_90%_line,aggregate_report_min,aggregate_report_max,aggregate_report_error%,aggregate_report_rate,aggregate_report_bandwidth
+Create Linked List,1,21490,21490,21490,21490,21490,0.0,0.04653327128897162,0.006180200093066543
+TOTAL,1,21490,21490,21490,21490,21490,0.0,0.04653327128897162,0.006180200093066543

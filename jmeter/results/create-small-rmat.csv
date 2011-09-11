@@ -1,0 +1,3 @@
+sampler_label,aggregate_report_count,average,aggregate_report_median,aggregate_report_90%_line,aggregate_report_min,aggregate_report_max,aggregate_report_error%,aggregate_report_rate,aggregate_report_bandwidth
+Create RMAT,1,123830,123830,123830,123830,123830,0.0,0.008075587498990552,0.0010725389647096826
+TOTAL,1,123830,123830,123830,123830,123830,0.0,0.008075587498990552,0.0010725389647096826
