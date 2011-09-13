@@ -1,10 +1,15 @@
 #!/bin/bash
 
+# algorithm params
+RMAT_SCALE=${RMAT_SCALE:=8}
+
+#logging config
 SCRIPT=`basename $0`
 RESULT_LOG="../results/${SCRIPT}.log"
+
+# build the URL
 HOST_UNDER_TEST="localhost"
 HOST_PORT="7474"
-RMAT_SCALE=8
 ENDPOINT="lab/env/rmat/${RMAT_SCALE}"
 
 echo "timed curl POST /${ENDPOINT}" >${RESULT_LOG}
