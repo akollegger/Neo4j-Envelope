@@ -1,6 +1,9 @@
 package org.neo4j.laboratory.env;
 
+import org.neo4j.graphalgo.GraphAlgoFactory;
+import org.neo4j.graphalgo.PathFinder;
 import org.neo4j.graphdb.*;
+import org.neo4j.kernel.Traversal;
 
 import javax.ws.rs.*;
 import javax.ws.rs.Path;
@@ -397,5 +400,47 @@ public class EnvelopeResource
         RelationshipType relType = DynamicRelationshipType.withName( "rmat" );
         RmatGenerator.createRmatGenerator( graphdb, relType, scale ).generate( null );
         return "{}";
+    }
+
+    @GET
+    @Path("/all-paths/{range}/{depth}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public String checkPaths( @Context GraphDatabaseService graphdb, @PathParam("range") long range, @PathParam("depth") int depth )
+    {
+        RelationshipExpander expander = Traversal.expanderForAllTypes();
+        PathFinder<org.neo4j.graphdb.Path> algo = GraphAlgoFactory.allPaths( expander, depth );
+        Node start = null;
+        Node end = null;
+
+        long ops = 0;
+        long found = 0;
+        long gaps = 0;
+
+        for ( int i = 0; i < range; i++ )
+        {
+            try
+            {
+                start = graphdb.getNodeById( i );
+                for ( int j = i; j < range; j++ )
+                {
+                    try
+                    {
+                        end = graphdb.getNodeById( j );
+                        Iterable<org.neo4j.graphdb.Path> paths = algo.findAllPaths( start, end );
+                        for ( org.neo4j.graphdb.Path p: paths) {
+                            found++;
+                        }
+                        ops++;
+                    } catch ( NotFoundException nfe )
+                    {
+                    }
+                }
+            } catch ( NotFoundException nfe )
+            {
+                gaps++;
+            }
+        }
+
+        return "{ \"operations\" : " + ops + ", \"found\" : " + found + ", \"gaps\" : " + gaps + " }";
     }
 }
