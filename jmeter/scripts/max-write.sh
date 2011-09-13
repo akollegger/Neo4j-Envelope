@@ -1,5 +1,7 @@
 #!/bin/bash
-RESULT_LOG="../results/create-disc-graph.log"
+SCRIPT=`basename $0`
+RESULT_LOG="../results/${SCRIPT}.log"
+
 HOST_UNDER_TEST="localhost"
 COUNT="100000"
 BATCH="10000"

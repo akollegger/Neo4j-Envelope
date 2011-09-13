@@ -124,14 +124,15 @@ public class RmatGenerator implements GraphGenerator
                     long k = u;
                     k <<= 32;
                     k += v;
-                    if ( links.add( k ) )
-                    {
+
                         Node head = graphdb.getNodeById( u + offsetid );
                         Node tail = graphdb.getNodeById( v + offsetid );
 
-                        Relationship rel = head.createRelationshipTo( tail, relType );
-                        rel.setProperty( "v", (1 + r.nextInt( (int) N )) );
-                    }
+                        if (!relationShipExistsFrom(head, tail))
+                        {
+                            Relationship rel = head.createRelationshipTo( tail, relType );
+                            rel.setProperty( "v", (1 + r.nextInt( (int) N )) );
+                        }
 
                     if ( (edges % flushInterval) == 0 )
                     {
@@ -149,6 +150,20 @@ public class RmatGenerator implements GraphGenerator
         }
 
         return returnNodes;
+    }
+
+    private boolean relationShipExistsFrom( Node head, Node tail )
+    {
+        boolean relationshipDoesExist = false;
+        for (Relationship rel : head.getRelationships())
+        {
+            if (rel.getEndNode().equals( tail ))
+            {
+                relationshipDoesExist = true;
+                break;
+            }
+        }
+        return relationshipDoesExist;
     }
 
 }
