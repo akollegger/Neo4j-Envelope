@@ -13,3 +13,5 @@ target
 .idea
 .DS_Store
 .shell_history
+*.log
+jmeter/results/*

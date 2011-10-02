@@ -6,7 +6,7 @@ import java.util.*;
 
 public class RmatGenerator implements GraphGenerator
 {
-    private final long flushInterval = 10000;
+    private final long batch = 1000;
 
     private GraphDatabaseService graphdb;
     private RelationshipType relType;
@@ -35,17 +35,17 @@ public class RmatGenerator implements GraphGenerator
 
     public Iterable<Node> generate( Node origin )
     {
+        long N = 1 << scale;
+
         // first, create all the nodes. NodeGenerator only returns the last node created, which should be the highest ID
-        Iterable<Node> returnNodes = NodeGenerator.createNodeGenerator( graphdb, 1 << scale, flushInterval ).generate( null );
+        Iterable<Node> returnNodes = NodeGenerator.createNodeGenerator( graphdb, N, batch ).generate( null );
         Node highestNode = returnNodes.iterator().next();
-        long offsetid = highestNode.getId() - (1<<scale);
+        long offsetid = highestNode.getId() - N;
 
         Random r = new Random( 3 );
         HashSet<Long> links = new HashSet<Long>();
 
-        long N = 1 << scale;
         long E = N * 8;
-
         long edges = 0;
         Transaction tx = graphdb.beginTx();
         try
@@ -120,21 +120,20 @@ public class RmatGenerator implements GraphGenerator
 
                 if ( u != v )
                 {
-                    edges++;
-                    long k = u;
-                    k <<= 32;
-                    k += v;
+                    Node head = graphdb.getNodeById( u + offsetid );
+                    Node tail = graphdb.getNodeById( v + offsetid );
 
-                        Node head = graphdb.getNodeById( u + offsetid );
-                        Node tail = graphdb.getNodeById( v + offsetid );
+                    // ABK, why not create another relationship?
+                    //
+                    if ( !relationShipExistsFrom( head, tail ) )
+                    {
+                        Relationship rel = head.createRelationshipTo( tail, relType );
+                        rel.setProperty( "v", (1 + r.nextInt( (int) N )) );
 
-                        if (!relationShipExistsFrom(head, tail))
-                        {
-                            Relationship rel = head.createRelationshipTo( tail, relType );
-                            rel.setProperty( "v", (1 + r.nextInt( (int) N )) );
-                        }
+                        edges++;
+                    }
 
-                    if ( (edges % flushInterval) == 0 )
+                    if ( (edges % batch) == 0 )
                     {
                         tx.success();
                         tx.finish();
@@ -155,9 +154,9 @@ public class RmatGenerator implements GraphGenerator
     private boolean relationShipExistsFrom( Node head, Node tail )
     {
         boolean relationshipDoesExist = false;
-        for (Relationship rel : head.getRelationships())
+        for ( Relationship rel : head.getRelationships() )
         {
-            if (rel.getEndNode().equals( tail ))
+            if ( rel.getEndNode().equals( tail ) )
             {
                 relationshipDoesExist = true;
                 break;

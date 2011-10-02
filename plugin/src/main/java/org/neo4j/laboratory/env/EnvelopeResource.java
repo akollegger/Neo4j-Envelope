@@ -59,7 +59,7 @@ public class EnvelopeResource
         {
             graphdb.getNodeById( node );
         }
-        return "{}";
+        return "{ \"read\" : " + count + " }";
     }
 
     @POST
@@ -402,6 +402,7 @@ public class EnvelopeResource
         return "{}";
     }
 
+
     @GET
     @Path("/all-paths/{range}/{depth}")
     @Produces(MediaType.APPLICATION_JSON)
@@ -427,9 +428,53 @@ public class EnvelopeResource
                     {
                         end = graphdb.getNodeById( j );
                         Iterable<org.neo4j.graphdb.Path> paths = algo.findAllPaths( start, end );
+                        if (paths.iterator().hasNext()) found++;
+                        /**
+                         * iterate over paths instead?
                         for ( org.neo4j.graphdb.Path p: paths) {
                             found++;
                         }
+                         */
+                        ops++;
+                    } catch ( NotFoundException nfe )
+                    {
+                    }
+                }
+            } catch ( NotFoundException nfe )
+            {
+                gaps++;
+            }
+        }
+
+        return "{ \"operations\" : " + ops + ", \"found\" : " + found + ", \"gaps\" : " + gaps + " }";
+    }
+
+    @GET
+    @Path("/any-path/{range}/{depth}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public String checkPathsExist( @Context GraphDatabaseService graphdb, @PathParam("range") long range, @PathParam("depth") int depth )
+    {
+        RelationshipExpander expander = Traversal.expanderForAllTypes();
+        PathFinder<org.neo4j.graphdb.Path> algo = GraphAlgoFactory.allPaths( expander, depth );
+        Node start = null;
+        Node end = null;
+
+        long ops = 0;
+        long found = 0;
+        long gaps = 0;
+
+        for ( int i = 0; i < range; i++ )
+        {
+            try
+            {
+                start = graphdb.getNodeById( i );
+                for ( int j = i; j < range; j++ )
+                {
+                    try
+                    {
+                        end = graphdb.getNodeById( j );
+                        org.neo4j.graphdb.Path path = algo.findSinglePath( start, end );
+                        if (path != null) found++;
                         ops++;
                     } catch ( NotFoundException nfe )
                     {
