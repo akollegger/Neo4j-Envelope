@@ -3,7 +3,11 @@ package org.neo4j.laboratory.env;
 import org.neo4j.graphalgo.GraphAlgoFactory;
 import org.neo4j.graphalgo.PathFinder;
 import org.neo4j.graphdb.*;
+import org.neo4j.graphdb.traversal.Evaluation;
+import org.neo4j.graphdb.traversal.Evaluator;
+import org.neo4j.graphdb.traversal.TraversalDescription;
 import org.neo4j.kernel.Traversal;
+import org.neo4j.kernel.Uniqueness;
 
 import javax.ws.rs.*;
 import javax.ws.rs.Path;
@@ -428,12 +432,13 @@ public class EnvelopeResource
                     {
                         end = graphdb.getNodeById( j );
                         Iterable<org.neo4j.graphdb.Path> paths = algo.findAllPaths( start, end );
-                        if (paths.iterator().hasNext()) found++;
+                        if ( paths.iterator().hasNext() )
+                            found++;
                         /**
                          * iterate over paths instead?
-                        for ( org.neo4j.graphdb.Path p: paths) {
-                            found++;
-                        }
+                         for ( org.neo4j.graphdb.Path p: paths) {
+                         found++;
+                         }
                          */
                         ops++;
                     } catch ( NotFoundException nfe )
@@ -455,7 +460,6 @@ public class EnvelopeResource
     public String checkPathsExist( @Context GraphDatabaseService graphdb, @PathParam("range") long range, @PathParam("depth") int depth )
     {
         RelationshipExpander expander = Traversal.expanderForAllTypes();
-        PathFinder<org.neo4j.graphdb.Path> algo = GraphAlgoFactory.allPaths( expander, depth );
         Node start = null;
         Node end = null;
 
@@ -473,8 +477,8 @@ public class EnvelopeResource
                     try
                     {
                         end = graphdb.getNodeById( j );
-                        org.neo4j.graphdb.Path path = algo.findSinglePath( start, end );
-                        if (path != null) found++;
+                        if ( pathExists( start, end, depth ) )
+                            found++;
                         ops++;
                     } catch ( NotFoundException nfe )
                     {
@@ -487,5 +491,40 @@ public class EnvelopeResource
         }
 
         return "{ \"operations\" : " + ops + ", \"found\" : " + found + ", \"gaps\" : " + gaps + " }";
+    }
+
+    static final TraversalDescription UNIQUE_DEPTH_TRAV = Traversal.description()
+            .depthFirst()
+            .uniqueness( Uniqueness.NODE_RECENT );
+
+    private boolean pathExists( Node start, Node end, final int depth )
+    {
+        final long endId = end.getId();
+
+        final TraversalDescription findFirstPath = UNIQUE_DEPTH_TRAV.evaluator( new Evaluator()
+        {
+            boolean foundAPath = false;
+
+            @Override
+            public Evaluation evaluate( org.neo4j.graphdb.Path path )
+            {
+                if ( !foundAPath )
+                {
+                    if ( path.endNode().getId() == endId )
+                    {
+                        foundAPath = true;
+                        return Evaluation.INCLUDE_AND_PRUNE;
+                    }
+                    else if ( path.length() >= depth )
+                        return Evaluation.EXCLUDE_AND_PRUNE;
+                    else
+                        return Evaluation.INCLUDE_AND_CONTINUE;
+                }
+                else
+                    return Evaluation.EXCLUDE_AND_PRUNE;
+            }
+        } );
+
+        return findFirstPath.traverse( start ).iterator().hasNext();
     }
 }
