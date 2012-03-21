@@ -9,7 +9,7 @@
 
     <properties>
         <jersey-version>1.8</jersey-version>
-        <neo4j-version>1.5.M01</neo4j-version>
+        <neo4j-version>1.6.1</neo4j-version>
     </properties>
     <dependencies>
 

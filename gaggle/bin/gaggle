@@ -1,0 +1,124 @@
+#! /bin/sh
+# file: bin/gaggle.sh
+
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ] ; do SOURCE="$(readlink "$SOURCE")"; done
+BASE_DIR="$( cd -P "$( dirname "$SOURCE" )/.." && pwd )"
+
+LIB_DIR="${BASE_DIR}/lib"
+GAGGLE_CONFIG="${BASE_DIR}/etc/gaggle.cfg"
+
+
+# set up "-i" for sed, os-dependent way
+dashi=(-i "")  # default is version of sed that works on Mac OS X
+os=`uname`
+os_lwr=$(echo "$os" | sed 's/^\(\w\{5\}\).*/\1/' | tr '[A-Z]' '[a-z]')
+case "$os_lwr" in
+    "linux" )  dashi=(-i) ;;
+    "cygwi" )  dashi=(-i) ;;
+    "mingw" )  dashi=(-i) ;;
+esac
+
+# prepare gagglespace
+prepareGaggleSpace() {
+
+  # prepare the workspace
+  mkdir -p "${GAGGLE_SPACE}"
+
+  # download neo4j into workspace, if not already there
+  NEO4J_ARCHIVE="neo4j-${NEO4J_EDITION}-${NEO4J_VERSION}-unix.tar.gz"
+  NEO4J_PROTOTYPE="${GAGGLE_SPACE}/neo4j-${NEO4J_EDITION}-${NEO4J_VERSION}"
+
+  if [[ ! -f "${GAGGLE_SPACE}/${NEO4J_ARCHIVE}" ]]; then 
+    curl http://dist.neo4j.org/${NEO4J_ARCHIVE} --output "${GAGGLE_SPACE}/${NEO4J_ARCHIVE}"; 
+  fi
+
+  # also untar it, for easier replication by other steps
+  if [[ ! -d "${NEO4J_PROTOTYPE}" ]]; then
+    tar xzf "${GAGGLE_SPACE}/${NEO4J_ARCHIVE}" -C "${GAGGLE_SPACE}"
+  fi
+}
+
+# create and configure neo4j gaggles
+createGaggles() {
+  for (( i=1; i<=${GAGGLE_COUNT}; i++ )); do 
+    cp -rn "${NEO4J_PROTOTYPE}/" "${GAGGLE_SPACE}/neo4j-${i}" 2>&1; 
+  done
+
+  # modify neo4j-server.properties
+  # strip existing settings from neo4j-server.properties
+  find "${GAGGLE_SPACE}" -name neo4j-server.properties -print | \
+    xargs sed -e '/org\.neo4j\.server\.webserver\.port/d' -e '/org\.neo4j\.server\.database\.mode/d' "${dashi[@]}"
+
+  # configure unique ports
+  for (( i=1; i<=${GAGGLE_COUNT}; i++ )); do 
+    echo "org.neo4j.server.webserver.port=747$(($i+3))" >>  "${GAGGLE_SPACE}/neo4j-${i}/conf/neo4j-server.properties"
+  done
+
+}
+
+
+provisionGaggle() {
+  prepareGaggleSpace
+  createGaggles
+}
+
+startGaggle() {
+  for (( i=1; i<=${GAGGLE_COUNT}; i++ )); do 
+    ${GAGGLE_SPACE}/neo4j-${i}/bin/neo4j start; 
+  done
+}
+
+stopGaggle() {
+  for (( i=1; i<=${GAGGLE_COUNT}; i++ )); do 
+    ${GAGGLE_SPACE}/neo4j-${i}/bin/neo4j stop; 
+  done
+}
+
+showStatus() {
+  for (( i=1; i<=${GAGGLE_COUNT}; i++ )); do 
+    echo "${GAGGLE_SPACE}/neo4j-${i}: $( ${GAGGLE_SPACE}/neo4j-${i}/bin/neo4j status ) "
+  done
+}
+
+showConfig() {
+  cat "${GAGGLE_CONFIG}"
+}
+
+. "${GAGGLE_CONFIG}"
+
+case "${1}" in
+  create)
+    provisionGaggle
+    ;;
+
+  start)
+    startGaggle
+    ;;
+
+  stop)
+    stopGaggle
+    ;;
+
+  restart)
+    stopGaggle
+    startGaggle
+    ;;
+
+  status)
+    showStatus
+    ;;
+
+  info)
+    showConfig
+    ;;
+
+  *)
+    echo "Usage: gaggle { create | start | stop | restart | info }"
+    exit 1;;
+
+esac
+
+exit $?
+
+

@@ -1,0 +1,68 @@
+#! /bin/sh
+# file: bin/gurl.sh
+
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ] ; do SOURCE="$(readlink "$SOURCE")"; done
+BASE_DIR="$( cd -P "$( dirname "$SOURCE" )/.." && pwd )"
+
+GURL_CONFIG="${BASE_DIR}/etc/gurl.cfg"
+
+# set up "-i" for sed, os-dependent way
+dashi=(-i "")  # default is version of sed that works on Mac OS X
+os=`uname`
+os_lwr=$(echo "$os" | sed 's/^\(\w\{5\}\).*/\1/' | tr '[A-Z]' '[a-z]')
+case "$os_lwr" in
+    "linux" )  dashi=(-i) ;;
+    "cygwi" )  dashi=(-i) ;;
+    "mingw" )  dashi=(-i) ;;
+esac
+
+. "${GURL_CONFIG}"
+
+. "${BASE_DIR}/bin/resty"
+
+resty http://localhost:7474 -H "Accept:application/json" -H "Content-Type:application/json"
+
+
+mkNode() {
+  if [ "${1}" == "" ]; then
+    POST /db/data/node | jsawk 'return this.self'
+  elif [ "${2}" == "" ]; then
+    POST /db/data/node "${1}" | jsawk 'return this.self'
+  else
+    PUT /db/data/node/${1}/properties "${2}"
+  fi
+}
+
+case "${1}" in
+  graph)
+    GET /db/data
+    ;;
+
+  mk)
+    mkNode "${2}" "${3}"
+    ;;
+
+  index)
+    mkIndex "${2}"
+
+  node)
+    if [ "$2" == "" ]; then
+      echo "Usage: gurl node <node-id>"
+      exit 1
+    fi
+    GET /db/data/node/${2}
+    ;;
+
+  info)
+    ;;
+
+  *)
+    echo "Usage: gurl { graph | node | info }"
+    exit 1;;
+
+esac
+
+exit $?
+
+
